@@ -3,3 +3,5 @@
 
 # Ada Library Information
 *.ali
+__pycache__
+.DS_Store
