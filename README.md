@@ -1,0 +1,2 @@
+# rs_spatiotemporal_vineyard_yield_forecasting
+Spatiotemporal vineyard yield forecasting using satellite imagery and management data fusion
