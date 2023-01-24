@@ -17,7 +17,6 @@ def eval(cultivar_list = None, year_list = None, patch_size = 80, patch_offset =
             spatial_resolution = 10, 
             exp_name = None):
 
-
     if spatial_resolution == 1: 
         data_dir           = '/data2/hkaman/Livingston/data/1m/'
         bsize = 10
@@ -27,13 +26,9 @@ def eval(cultivar_list = None, year_list = None, patch_size = 80, patch_offset =
         bsize = 2
         exp_output_dir = '/data2/hkaman/Livingston/EXPs/10m/' + 'EXP_' + exp_name
 
-
-
     if cultivar_list is None: 
         cultivar_list = ['MALVASIA_BIANCA', 'MUSCAT_OF_ALEXANDRIA', 'CABERNET_SAUVIGNON','SYMPHONY', 'MERLOT', 'CHARDONNAY', 'SYRAH', 'RIESLING']
 
-    
-    print(exp_output_dir)
 
     best_model_name   = exp_output_dir + '/best_model' + exp_name + '.pth'
 
@@ -50,8 +45,6 @@ def eval(cultivar_list = None, year_list = None, patch_size = 80, patch_offset =
     test_df_name_20   = exp_output_dir + '/' + exp_name + '_test_20m.csv'
     test_df_name_30   = exp_output_dir + '/' + exp_name + '_test_30m.csv'
     test_df_name_60   = exp_output_dir + '/' + exp_name + '_test_60m.csv'
-
-
 
 
     #==============================================================================================================#
@@ -238,7 +231,6 @@ def eval(cultivar_list = None, year_list = None, patch_size = 80, patch_offset =
             test_ytrue_60.append(t_batch_of_patch_ytrue_60m)
 
             ytepw15 = list_y_test_pred[14].detach().cpu().numpy()
-
 
             t_batch_of_patch_ypred_20m = utils.patch_resize(ytepw15, spatial_resolution = 20, status = 'pred')
             test_ypred_20.append(t_batch_of_patch_ypred_20m)

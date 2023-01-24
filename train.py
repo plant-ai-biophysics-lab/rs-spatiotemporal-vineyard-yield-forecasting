@@ -2,20 +2,28 @@ import os
 import torch
 import torch.nn as nn
 from src.UNetConvLSTM import UNet2DConvLSTM
-from src.datatools import data_weight_sampler, ReadData
-from src.ModelEngine import train_val, EarlyStopping
-from src import utils 
+from src.DataLoader import return_cost_sensitive_weight_sampler, dataloader_, pixel_hold_out_dataloader
+from src import utils, ModelEngine, Inference
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(torch.cuda.is_available())
 #==============================================================================================================#
 #==================================================Initialization =============================================#
 #==============================================================================================================#
-def train(scenario = None, spatial_resolution = None, patch_size = 80, patch_offset = 40,  
-            cultivar_list = None, block_list = None, year_list = None, 
-            dropout = 0.3, batch_size = 64, learning_rate = 0.0001, weight_decay = 0.0006,
-            in_channel = 5, emb_channel = 4, loss_stop_tolerance = 50, epochs = None, exp_name = None):
-
-
+def train(scenario: str, 
+            spatial_resolution: int, 
+            patch_size: int, 
+            patch_offset: int,  
+            cultivar_list: list,  
+            year_list: list, 
+            dropout: int, 
+            batch_size: int, 
+            learning_rate: float, 
+            weight_decay: float,
+            in_channel: int, 
+            emb_channel: int, 
+            loss_stop_tolerance: int, 
+            epochs: int, 
+            exp_name: str):
 
     if spatial_resolution == 1: 
         data_dir           = '/data2/hkaman/Livingston/data/1m/'
@@ -29,6 +37,7 @@ def train(scenario = None, spatial_resolution = None, patch_size = 80, patch_off
 
     
     isExist  = os.path.isdir(exp_output_dir)
+
     if not isExist:
         os.makedirs(exp_output_dir)
         os.makedirs(exp_output_dir + '/coords')
@@ -43,72 +52,76 @@ def train(scenario = None, spatial_resolution = None, patch_size = 80, patch_off
     #==============================================================================================================#
     #================================================== csv file generator=========================================#
     #==============================================================================================================#
-    train_csv, val_csv, test_csv = utils.scenario_csv_generator(scenario = scenario, spatial_resolution = spatial_resolution, 
-                                                                img_size = patch_size, offset = patch_offset,  
+    train_csv, val_csv, test_csv = utils.data_generator(scenario = scenario, spatial_resolution = spatial_resolution, 
+                                                                patch_size = patch_size, patch_offset = patch_offset,  
                                                                 cultivar_list = cultivar_list, 
-                                                                year_list = year_list)
+                                                                year_list = year_list).return_split_dataframe()
     
     #==============================================================================================================#
     #============================================      Data Weight Generation     =================================#
     #==============================================================================================================#
-    train_sampler, val_sampler, test_sampler  = data_weight_sampler(train_csv, val_csv, test_csv, exp_output_dir)
+    train_sampler, valid_sampler, test_sampler  = return_cost_sensitive_weight_sampler(train_csv, val_csv, test_csv, exp_output_dir)
     #==============================================================================================================#
-    #============================================     Reading Data Senario 1      =================================#
+    #============================================     Reading Data                =================================#
     #==============================================================================================================#
 
-        
-    dataset_training = ReadData(data_dir, exp_output_dir, category = 'train', patch_size = patch_size, in_channels = in_channel, 
-                                                                                spatial_resolution = spatial_resolution, run_status = 'train')
-    dataset_validate = ReadData(data_dir, exp_output_dir, category = 'val',  patch_size = patch_size, in_channels = in_channel, 
-                                                                                spatial_resolution = spatial_resolution, run_status = 'train')
-
-
+    if scenario == 'pixel_hold_out': 
+        dataset_training = pixel_hold_out_dataloader(data_dir, exp_output_dir, category = 'train', patch_size = patch_size)
+        dataset_validate = pixel_hold_out_dataloader(data_dir, exp_output_dir, category = 'val',  patch_size = patch_size)
+        dataset_test     = pixel_hold_out_dataloader(data_dir, exp_output_dir, category = 'test',  patch_size = patch_size)
+    else: 
+        dataset_training = dataloader_(data_dir, exp_output_dir, category = 'train', patch_size = patch_size, in_channels = in_channel, 
+                                                                                    spatial_resolution = spatial_resolution, run_status = 'valid')
+        dataset_validate = dataloader_(data_dir, exp_output_dir, category = 'val',  patch_size = patch_size, in_channels = in_channel, 
+                                                                                    spatial_resolution = spatial_resolution, run_status = 'valid')
+        dataset_test     = dataloader_(data_dir, exp_output_dir, category = 'test',  patch_size = patch_size, in_channels = in_channel, 
+                                                                                    spatial_resolution = spatial_resolution, run_status = 'eval')     
     #==============================================================================================================#
     #=============================================      Data Loader               =================================#
     #==============================================================================================================#                      
     # define training and validation data loaders
     data_loader_training = torch.utils.data.DataLoader(dataset_training, batch_size= batch_size, 
-                                                    shuffle=False, sampler=train_sampler, num_workers=8) #, collate_fn=utils.collate_fn) # 
+                                                    shuffle=False, sampler=train_sampler, num_workers=8) 
     data_loader_validate = torch.utils.data.DataLoader(dataset_validate, batch_size= batch_size, 
-                                                    shuffle=False, sampler=val_sampler, num_workers=8)
-
+                                                    shuffle=False, sampler=valid_sampler, num_workers=8)
+    data_loader_test     = torch.utils.data.DataLoader(dataset_test, batch_size=batch_size, 
+                                                    shuffle=False, sampler=test_sampler, num_workers=8) 
     #==============================================================================================================#
     #================================================ Model Calling ===============================================#
     #==============================================================================================================#
 
-    model = UNet2DConvLSTM(in_channels = in_channel, out_channels =  1, num_filters = 16, 
-                                                    dropout = dropout, 
-                                                    Emb_Channels = emb_channel, 
-                                                    batch_size = batch_size, 
-                                                    botneck_size = botneck_size).to(device)
+    model = UNet2DConvLSTM(in_channels = in_channel, out_channels = 1, 
+                                                    num_filters   = 16, 
+                                                    dropout       = dropout, 
+                                                    Emb_Channels  = emb_channel, 
+                                                    batch_size    = batch_size, 
+                                                    botneck_size  = botneck_size).to(device)
 
-    #print(model)
     #================================================ Loss Function ===============================================#
     loss_fn = nn.MSELoss()
     #================================================ Optimizer ===================================================#
     ### ADAM
     params = [p for p in model.parameters() if p.requires_grad]
-    optimizer = torch.optim.Adam(params, lr=learning_rate, weight_decay=weight_decay)
-
+    optimizer = torch.optim.Adam(params, lr=learning_rate, weight_decay = weight_decay)
     #================================================= Training ===================================================#
-
+    best_val_loss = 100000 # initial dummy value
+    early_stopping = utils.EarlyStopping(tolerance=loss_stop_tolerance, min_delta=50)
+    #==============================================================================================================#
+    #==============================================================================================================#
     loss_stats = {'train': [],"val": []}
+
     loss_week_stats = {
         'train_w1': [], 'train_w2': [], 'train_w3': [], 'train_w4': [], 'train_w5': [],'train_w6': [],'train_w7': [],'train_w8': [], 'train_w9': [], 
         'train_w10': [], 'train_w11': [], 'train_w12': [], 'train_w13': [], 'train_w14': [], 'train_w15': [],
         "val_w1": [], "val_w2": [], "val_w3": [], "val_w4": [], "val_w5": [], "val_w6": [], "val_w7": [], "val_w8": [], "val_w9": [], "val_w10": [],
         "val_w11": [],"val_w12": [], "val_w13": [], "val_w14": [], "val_w15": []}
-
-    best_val_loss = 100000 # initial dummy value
-    early_stopping = EarlyStopping(tolerance=loss_stop_tolerance, min_delta=50)
-    
-    #==============================================================================================================#
-    #==============================================================================================================#
     for epoch in range(1, epochs+1):
         
         # TRAINING
         train_epoch_loss = 0
         tplw1, tplw2, tplw3, tplw4, tplw5, tplw6, tplw7, tplw8, tplw9, tplw10, tplw11, tplw12, tplw13, tplw14, tplw15 = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        epoch_tr_weekly_loss_list = [tplw1, tplw2, tplw3, tplw4, tplw5, tplw6, tplw7, tplw8, tplw9, tplw10, tplw11, tplw12, tplw13, tplw14, tplw15]
+
         model.train()
         size = len(data_loader_training.dataset)
 
@@ -126,7 +139,6 @@ def train(scenario = None, spatial_resolution = None, patch_size = 80, patch_off
             list_y_train_pred  = model(X_train_batch, E_train_batch)
             
             optimizer.zero_grad()
-            
             
             train_loss_w1  = loss_fn(y_train_batch, list_y_train_pred[0])
             tplw1 += train_loss_w1.item()
@@ -176,8 +188,6 @@ def train(scenario = None, spatial_resolution = None, patch_size = 80, patch_off
             
             train_loss = train_loss_w1 + train_loss_w2 + train_loss_w3 + train_loss_w4 + train_loss_w5 + train_loss_w6 + train_loss_w7 + train_loss_w8 + train_loss_w9+ train_loss_w10+train_loss_w11+train_loss_w12+train_loss_w13+train_loss_w14+train_loss_w15
                 
-                
-
             train_loss.backward()
             optimizer.step()
             
@@ -250,9 +260,7 @@ def train(scenario = None, spatial_resolution = None, patch_size = 80, patch_off
                 val_loss = vl_w1 + vl_w2 + vl_w3 + vl_w4 + vl_w5 + vl_w6 + vl_w7 + vl_w8 + vl_w9 + vl_w10 + vl_w11 + vl_w12 + vl_w13 + vl_w14 + vl_w15
                 
                 val_epoch_loss += val_loss.item()
-                
 
-        #elif MSMode == False:
         loss_stats['train'].append(train_epoch_loss/len(data_loader_training))
         loss_week_stats['train_w1'].append(tplw1/len(data_loader_training))
         loss_week_stats['train_w2'].append(tplw2/len(data_loader_training))
@@ -325,11 +333,9 @@ def train(scenario = None, spatial_resolution = None, patch_size = 80, patch_off
             print("We are at epoch:", epoch)
             break
 
-    _ = utils.save_loss_df(loss_stats, loss_df_name, loss_fig_name)
-    _ = utils.save_loss_df(loss_week_stats, loss_weekly_df_name, loss_weekly_fig_name)
+    _ = Inference.save_loss_df(loss_stats, loss_df_name, loss_fig_name)
+    _ = Inference.save_loss_df(loss_week_stats, loss_weekly_df_name, loss_weekly_fig_name)
  
-
-
 if __name__ == "__main__":
     '''year_dict = {'Y1617':['2018', '2019', '2016', '2017'], 
                 'Y1716':['2018', '2019', '2017', '2016'], 
@@ -348,4 +354,6 @@ if __name__ == "__main__":
     train(scenario = 3, spatial_resolution = 1, patch_size = 80, patch_offset = 40,  
         cultivar_list = None, block_list = None, year_list = None, 
         dropout = 0.3, batch_size = 32, learning_rate = 0.001, weight_decay = 0.0006,
-        in_channel = 6, emb_channel = 4, loss_stop_tolerance = 150, epochs = 500, exp_name = 'S3_UNetLSTM_1m_time') 
+        in_channel = 6, emb_channel = 4, loss_stop_tolerance = 150, epochs = 500, exp_name = 'test') 
+
+        

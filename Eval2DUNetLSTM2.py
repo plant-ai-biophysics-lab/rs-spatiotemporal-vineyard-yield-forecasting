@@ -3,9 +3,9 @@ import numpy as np
 import torch
 
 #custom function 
-from src.UNet import UNet2DConvLSTM
-from src.datatools import data_weight_sampler, ReadData_V6, ReadData_V7, data_weight_sampler_eval, ReadData_V7_Time, ReadData_
-from src import utils 
+from src.UNetConvLSTM import UNet2DConvLSTM
+from src import utils
+from src.DataLoader import return_cost_sensitive_weight_sampler, dataloader_, pixel_hold_out_dataloader
 
 #==============================================================================================================#
 #==================================================Initialization =============================================#
@@ -59,17 +59,21 @@ def eval(cultivar_list = None, year_list = None, patch_size = 80, patch_offset =
     #==============================================================================================================#
     #============================================      Data Weight Generation     =================================#
     #==============================================================================================================#
-    #train_sampler, val_sampler, test_sampler  = data_weight_sampler_eval(exp_output_dir)
-    train_sampler, val_sampler, test_sampler  = data_weight_sampler(train_csv, val_csv, test_csv, exp_output_dir)
+    train_sampler, val_sampler, test_sampler  = return_cost_sensitive_weight_sampler(train_csv, val_csv, test_csv, exp_output_dir)
     #==============================================================================================================#
-    #============================================     Reading Data Senario 1      =================================#
+    #============================================     Reading Data                =================================#
     #==============================================================================================================#
-    dataset_training = ReadData_(data_dir, exp_output_dir, category = 'train', patch_size = patch_size, in_channels = in_channel, 
-                                                                                spatial_resolution = spatial_resolution, run_status = 'valid')
-    dataset_validate = ReadData_(data_dir, exp_output_dir, category = 'val',  patch_size = patch_size, in_channels = in_channel, 
-                                                                                spatial_resolution = spatial_resolution, run_status = 'valid')
-    dataset_test     = ReadData_(data_dir, exp_output_dir, category = 'test',  patch_size = patch_size, in_channels = in_channel, 
-                                                                                spatial_resolution = spatial_resolution, run_status = 'eval')
+    if scenario == 1: 
+        dataset_training = pixel_hold_out_dataloader(data_dir, exp_output_dir, category = 'train', patch_size = patch_size)
+        dataset_validate = pixel_hold_out_dataloader(data_dir, exp_output_dir, category = 'val',  patch_size = patch_size)
+        dataset_test     = pixel_hold_out_dataloader(data_dir, exp_output_dir, category = 'test',  patch_size = patch_size)
+    else: 
+        dataset_training = dataloader_(data_dir, exp_output_dir, category = 'train', patch_size = patch_size, in_channels = in_channel, 
+                                                                                    spatial_resolution = spatial_resolution, run_status = 'valid')
+        dataset_validate = dataloader_(data_dir, exp_output_dir, category = 'val',  patch_size = patch_size, in_channels = in_channel, 
+                                                                                    spatial_resolution = spatial_resolution, run_status = 'valid')
+        dataset_test     = dataloader_(data_dir, exp_output_dir, category = 'test',  patch_size = patch_size, in_channels = in_channel, 
+                                                                                    spatial_resolution = spatial_resolution, run_status = 'eval')                                                                           
     #==============================================================================================================#
     #=============================================      Data Loader               =================================#
     #==============================================================================================================#  
@@ -86,12 +90,9 @@ def eval(cultivar_list = None, year_list = None, patch_size = 80, patch_offset =
 
     model = UNet2DConvLSTM(in_channels = in_channel, out_channels = 1, num_filters = 16, 
                     dropout = dropout, Emb_Channels = emb_channel, batch_size = batch_size, botneck_size = bsize).to(device)
-
-    #================================================= Training ============================================
-
     #loading the model:
     model.load_state_dict(torch.load(best_model_name))
-
+    #================================================= Training ============================================
     train_output_files = []
     valid_output_files = []
     test_output_files = []
@@ -223,7 +224,6 @@ def eval(cultivar_list = None, year_list = None, patch_size = 80, patch_offset =
         
 
             list_y_test_pred = model(X_batch_test, C_batch_test)
-            #list_y_test_pred, list_test_b = model(X_batch_test)
             y_true_test = y_batch_test.detach().cpu().numpy()
             
             ytepw1 = list_y_test_pred[0].detach().cpu().numpy()
@@ -276,11 +276,10 @@ if __name__ == "__main__":
             'Y1918':['2016', '2017', '2019', '2018']}
 
     for key, l in year_dict.items():'''
-    #cultivar_list = ['CABERNET_SAUVIGNON', 'CHARDONNAY', 'RIESLING']
     eval(cultivar_list = None, year_list= None, patch_size = 16, patch_offset = 2, 
     scenario = 3, dropout = 0.3, batch_size = 64, in_channel = 6, 
-    emb_channel = 4, spatial_resolution = 10, exp_name = 'S3_UNetLSTM_10m_time')
-    #print(f"{key} is Done!")        
+    emb_channel = 4, spatial_resolution = 10, exp_name = 'test')
+     
         
         
         

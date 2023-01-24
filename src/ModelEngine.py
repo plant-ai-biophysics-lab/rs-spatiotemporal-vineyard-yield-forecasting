@@ -24,7 +24,6 @@ def Decoder2D(in_channels, out_channels, dropout):
         nn.PReLU(),
         nn.Dropout2d(p=dropout),)
 
-
 def MaxPolling2D():
     return nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
 
@@ -40,9 +39,7 @@ def OutConv2D_2(in_channels, out_channels):
 
 def OutConv2D(in_channels, out_channels):
     return nn.Sequential(
-        nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1, padding=0))
-
-        
+        nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1, padding=0))       
 
 class HadamardProduct(nn.Module):
     def __init__(self, shape):
@@ -165,7 +162,6 @@ class ConvLSTMCell(nn.Module):
         height, width = self.out_height, self.out_width
         return (torch.zeros(batch_size, self.hidden_dim, height, width, device=self.input_conv.weight.device),
                 torch.zeros(batch_size, self.hidden_dim, height, width, device=self.input_conv.weight.device))
-
 
 class ConvLSTM(nn.Module):
 
@@ -305,4 +301,8 @@ class ConvLSTM(nn.Module):
         return init_states_fw, init_states_bw  
     
     
-    
+#======================================================================================================================================#
+#====================================================== Training Config ===============================================================#
+#======================================================================================================================================#   
+
+
