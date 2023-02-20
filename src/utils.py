@@ -48,12 +48,15 @@ class data_generator():
 
         full_dataframe = self.return_dataframe_patch_info()
 
+
         if self.eval_scenario == 'pixel_hold_out': 
             train, valid, test = self.pixel_hold_out(full_dataframe)
         elif self.eval_scenario == 'year_hold_out':
             train, valid, test = self.year_hold_out(full_dataframe)
         elif self.eval_scenario == 'block_hold_out': 
             train, valid, test = self.block_hold_out(full_dataframe)
+        elif self.eval_scenario == 'block_year_hold_out': 
+            train, valid, test = self.block_year_hold_out(full_dataframe)
 
         print(f"Training Patches: {len(train)}, Validation: {len(valid)} and Test: {len(test)}")
         print("============================= Train =========================================")
@@ -174,7 +177,6 @@ class data_generator():
         test  = pd.concat(test_df_list)
 
         return train, valid, test
-
 
     def year_hold_out(self, df): 
 
@@ -312,8 +314,108 @@ class data_generator():
 
         return train, valid, test
 
+    def block_year_hold_out(self, df):
+        
+        datafram_grouby_year = df.groupby(by = 'year')
+        dataframe_year2017   = datafram_grouby_year.get_group('2017')
+        
+        new_dataframe_basedon_block_mean = pd.DataFrame()
+        block_root_name, cultivar, b_mean = [], [], []
+        
+        dataframe_year2017_groupby_block = dataframe_year2017.groupby(by = 'block')
+
+        for block, blockdf in dataframe_year2017_groupby_block:
+            name_split = os.path.split(block)[-1]
+            root_name  = name_split.replace(name_split[7:], '')
+            block_root_name.append(root_name)
+            
+            cultivar.append(blockdf['cultivar'].iloc[0])
+            b_mean.append(blockdf['patch_mean'].mean())
+            
+        new_dataframe_basedon_block_mean['block']      = block_root_name
+        new_dataframe_basedon_block_mean['cultivar']   = cultivar
+        new_dataframe_basedon_block_mean['block_mean'] = b_mean
+        
+        # split sorted blocks and then split within each cultivar 
+        BlockMeanBased_GroupBy_Cultivar = new_dataframe_basedon_block_mean.groupby(by=["cultivar"]) 
+
+        training_blocks_names = []
+        validation_blocks_names = []
+        testing_blocks_names = []
+        
+        for cul, frame in BlockMeanBased_GroupBy_Cultivar: 
+
+            n_blocks = len(frame.loc[frame['cultivar'] == cul])
+            
+            if frame.shape[0] == 3:
+                
+
+                name_0  = frame['block'].iloc[0] + '_' + self.year_list[0]
+                name_1  = frame['block'].iloc[0] + '_' + self.year_list[1]
+                training_blocks_names.append(name_0)
+                training_blocks_names.append(name_1)
+                
+                name_2  = frame['block'].iloc[1] + '_' + self.year_list[2]
+                validation_blocks_names.append(name_2) 
+
+                name_3  = frame['block'].iloc[2] + '_' + self.year_list[3]
+                testing_blocks_names.append(name_3) 
+
+
+                
+            elif frame.shape[0] > 3:
+
+                blocks_2017      = frame['block']
+                blocks_mean_2017 = frame['block_mean']
+
+                # List of tuples with blocks and mean yield
+                block_mean_yield_2017 = [(blocks, mean) for blocks, 
+                                    mean in zip(blocks_2017, blocks_mean_2017)]
+
+                block_mean_yield_2017 = sorted(block_mean_yield_2017, key = lambda x: x[1], reverse = True)
+                #print(block_mean_yield_2017)
+                #print("============================")
+
+                te  = 1
+                val = 2
+                for i in range(len(block_mean_yield_2017)):
+
+                    if i == te: 
+                        name_3  = block_mean_yield_2017[i][0] + '_' + self.year_list[3]
+                        testing_blocks_names.append(name_3)
+                        te = te + 3
+                        #print(f"{cul}: {name_3}")
+                    elif i == val: 
+                        name_2  = block_mean_yield_2017[i][0] + '_' + self.year_list[2]
+                        validation_blocks_names.append(name_2)
+                        val = val + 3
+                        #print(f"{cul}: {name_2}")
+                    else:
+                        name_0  = block_mean_yield_2017[i][0] + '_' + self.year_list[0]
+                        name_1  = block_mean_yield_2017[i][0] + '_' + self.year_list[1]
+                        #print(f"{cul}: {name_0, name_1}")
+                        training_blocks_names.append(name_0)
+                        training_blocks_names.append(name_1)
+
+                    
+                    
+                    
+                    #print(f"with MORE than 3: {name_0, name_1, name_2, name_3}")
+
+        #print(validation_blocks_names)
+        train = df[df['block'].isin(training_blocks_names)]
+        valid = df[df['block'].isin(validation_blocks_names)]
+        test  = df[df['block'].isin(testing_blocks_names)] 
+
+
+        return train, valid, test
+
+
+
+
 
 def print_df_summary(df):
+
     cultivars = df.groupby(by = 'cultivar')
     print(f"There are {len(cultivars)} cultivar types.")
 
@@ -323,3 +425,25 @@ def print_df_summary(df):
         print(f"Cultivar {cul} has {len(blocks_within_cultivar)} blocks and {df.shape[0]} samples:")
         for b, df2 in blocks_within_cultivar:
             print(f"     Block {b} has {df2.shape[0]} samples.")
+
+
+
+
+class EarlyStopping():
+    def __init__(self, tolerance=30, min_delta=0):
+
+        self.tolerance = tolerance
+        self.min_delta = min_delta
+        self.counter = 0
+        self.early_stop = False
+
+    def __call__(self, status):
+
+        if status is True:
+            self.counter = 0
+        elif status is False: 
+            self.counter +=1
+
+        print(f"count: {self.counter}")
+        if self.counter >= self.tolerance:  
+                self.early_stop = True

@@ -1,6 +1,11 @@
 import torch
 import torch.nn as nn
 import math
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from src import Inference 
 #======================================================================================================================================#
 #=========================================================== 2D Config =================================================================
 #======================================================================================================================================#
@@ -305,4 +310,189 @@ class ConvLSTM(nn.Module):
 #====================================================== Training Config ===============================================================#
 #======================================================================================================================================#   
 
+
+
+
+def save_loss_df(loss_stat, loss_df_name, loss_fig_name):
+
+    df = pd.DataFrame.from_dict(loss_stat).reset_index().melt(id_vars=['index']).rename(columns={"index":"epochs"})
+    df.to_csv(loss_df_name) 
+    plt.figure(figsize=(12,8))
+    sns.lineplot(data=df, x = "epochs", y="value", hue="variable").set_title('Train-Val Loss/Epoch')
+    plt.ylim(0, df['value'].max())
+    plt.savefig(loss_fig_name, dpi = 300)
+
+
+def predict(model, data_loader_training, data_loader_validate, data_loader_testing, exp_output_dir, Exp_name = None,): 
+
+
+    best_model_name      = exp_output_dir + '/best_model_' + Exp_name + '.pth'
+    train_df_name        = exp_output_dir + '/' + Exp_name + '_train.csv'
+    valid_df_name        = exp_output_dir + '/' + Exp_name + '_valid.csv'
+    test_df_name         = exp_output_dir + '/' + Exp_name + '_test.csv'
+    timeseries_fig       = exp_output_dir + '/' + Exp_name + '_timeseries.png'
+    scatterplot          = exp_output_dir + '/' + Exp_name + '_scatterplot.png'
+
+    train_bc_df1_name    = exp_output_dir + '/' + Exp_name + '_train_bc1.csv'
+    train_bc_df2_name    = exp_output_dir + '/' + Exp_name + '_train_bc2.csv'
+
+    valid_bc_df1_name    = exp_output_dir + '/' + Exp_name + '_valid_bc1.csv'
+    valid_bc_df2_name    = exp_output_dir + '/' + Exp_name + '_valid_bc2.csv'
+
+    test_bc_df1_name      = exp_output_dir + '/' + Exp_name + '_test_vis_bc1.csv'
+    test_bc_df2_name     = exp_output_dir + '/' + Exp_name + '_test_vis_bc2.csv'
+
+    model.load_state_dict(torch.load(best_model_name))
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    train_output_files = []
+    valid_output_files = []
+    test_output_files = []
+
+    with torch.no_grad():
+        
+        model.eval()
+        #================ Train===========================
+        for batch, sample in enumerate(data_loader_training):
+            
+            X_batch_train       = sample['image'].to(device)
+            y_batch_train       = sample['mask'].to(device)
+            C_batch_train       = sample['EmbMatrix'].to(device)
+            ID_batch_train      = sample['block']
+            Cult_batch_train    = sample['cultivar']
+            Xcoord_batch_train  = sample['X']
+            ycoord_batch_train  = sample['Y']
+            
+            
+            list_y_train_pred = model(X_batch_train, C_batch_train)
+            
+            y_true_train = y_batch_train.detach().cpu().numpy()
+            
+            ytpw1 = list_y_train_pred[0].detach().cpu().numpy()
+            ytpw2 = list_y_train_pred[1].detach().cpu().numpy()
+            ytpw3 = list_y_train_pred[2].detach().cpu().numpy()
+            ytpw4 = list_y_train_pred[3].detach().cpu().numpy()
+            ytpw5 = list_y_train_pred[4].detach().cpu().numpy()
+            ytpw6 = list_y_train_pred[5].detach().cpu().numpy()
+            ytpw7 = list_y_train_pred[6].detach().cpu().numpy()
+            ytpw8 = list_y_train_pred[7].detach().cpu().numpy()
+            ytpw9 = list_y_train_pred[8].detach().cpu().numpy()
+            ytpw10 = list_y_train_pred[9].detach().cpu().numpy()
+            ytpw11 = list_y_train_pred[10].detach().cpu().numpy()
+            ytpw12 = list_y_train_pred[11].detach().cpu().numpy()
+            ytpw13 = list_y_train_pred[12].detach().cpu().numpy()
+            ytpw14 = list_y_train_pred[13].detach().cpu().numpy()
+            ytpw15 = list_y_train_pred[14].detach().cpu().numpy()
+
+
+            this_batch_train = {"block": ID_batch_train, "cultivar": Cult_batch_train, "X": Xcoord_batch_train, "Y": ycoord_batch_train,
+                                "ytrue": y_true_train, "ypred_w1": ytpw1, "ypred_w2": ytpw2,"ypred_w3": ytpw3,"ypred_w4": ytpw4,"ypred_w5": ytpw5,"ypred_w6": ytpw6,"ypred_w7": ytpw7,"ypred_w8": ytpw8,
+                                "ypred_w9": ytpw9,"ypred_w10": ytpw10,"ypred_w11": ytpw11,"ypred_w12": ytpw12,"ypred_w13": ytpw13,"ypred_w14": ytpw14,"ypred_w15": ytpw15}
+            
+            train_output_files.append(this_batch_train)
+
+        train_df = Inference.ScenarioEvaluation2D(train_output_files)
+        train_df.to_csv(train_df_name)
+
+        #train_block_names      = utils.npy_block_names(train_output_files)
+        #df1d_train, df2d_train = utils.time_series_eval_csv(train_output_files, train_block_names, patch_size)
+        #df1d_train.to_csv(train_bc_df1_name)
+        #df2d_train.to_csv(train_bc_df2_name)
+
+        #================== Validaiton====================
+        for batch, sample in enumerate(data_loader_validate):
+            
+            X_batch_val       = sample['image'].to(device)
+            y_batch_val       = sample['mask'].to(device)
+            C_batch_val       = sample['EmbMatrix'].to(device)
+            ID_batch_val      = sample['block']
+            Cult_batch_val    = sample['cultivar']
+            Xcoord_batch_val  = sample['X']
+            ycoord_batch_val  = sample['Y']
+
+
+            list_y_val_pred = model(X_batch_val, C_batch_val)
+                
+            y_true_val    = y_batch_val.detach().cpu().numpy()
+
+            yvpw1 = list_y_val_pred[0].detach().cpu().numpy()
+            yvpw2 = list_y_val_pred[1].detach().cpu().numpy()
+            yvpw3 = list_y_val_pred[2].detach().cpu().numpy()
+            yvpw4 = list_y_val_pred[3].detach().cpu().numpy()
+            yvpw5 = list_y_val_pred[4].detach().cpu().numpy()
+            yvpw6 = list_y_val_pred[5].detach().cpu().numpy()
+            yvpw7 = list_y_val_pred[6].detach().cpu().numpy()
+            yvpw8 = list_y_val_pred[7].detach().cpu().numpy()
+            yvpw9 = list_y_val_pred[8].detach().cpu().numpy()
+            yvpw10 = list_y_val_pred[9].detach().cpu().numpy()
+            yvpw11 = list_y_val_pred[10].detach().cpu().numpy()
+            yvpw12 = list_y_val_pred[11].detach().cpu().numpy()
+            yvpw13 = list_y_val_pred[12].detach().cpu().numpy()
+            yvpw14 = list_y_val_pred[13].detach().cpu().numpy()
+            yvpw15 = list_y_val_pred[14].detach().cpu().numpy()
+            
+
+            this_batch_val = {"block": ID_batch_val, "cultivar": Cult_batch_val, "X": Xcoord_batch_val, "Y": ycoord_batch_val, "ytrue": y_true_val, "ypred_w1": yvpw1, "ypred_w2": yvpw2, "ypred_w3": yvpw3, "ypred_w4": yvpw4, "ypred_w5": yvpw5, "ypred_w6": yvpw6, "ypred_w7": yvpw7, "ypred_w8": yvpw8,
+                                "ypred_w9": yvpw9, "ypred_w10": yvpw10, "ypred_w11": yvpw11, "ypred_w12": yvpw12, "ypred_w13": yvpw13, "ypred_w14": yvpw14, "ypred_w15": yvpw15} 
+
+                
+            valid_output_files.append(this_batch_val)
+        # save the prediction in data2 drectory as a npy file
+        #np.save(valid_npy_name, valid_output_files)
+        valid_df = Inference.ScenarioEvaluation2D(valid_output_files)
+        valid_df.to_csv(valid_df_name)
+
+        #valid_block_names  = utils.npy_block_names(valid_output_files)
+        #df1d_valid, df2d_valid = utils.time_series_eval_csv(valid_output_files, valid_block_names, patch_size)
+        #df1d_valid.to_csv(valid_bc_df1_name)
+        #df2d_valid.to_csv(valid_bc_df2_name)
+    
+        #=================== Test ========================
+        for batch, sample in enumerate(data_loader_testing):
+            
+            X_batch_test       = sample['image'].to(device)
+            y_batch_test       = sample['mask'].to(device)
+            C_batch_test       = sample['EmbMatrix'].to(device)
+            ID_batch_test      = sample['block']
+            Cult_batch_test    = sample['cultivar']
+            Xcoord_batch_test  = sample['X']
+            ycoord_batch_test  = sample['Y']
+
+        
+
+            list_y_test_pred = model(X_batch_test, C_batch_test)
+            y_true_test = y_batch_test.detach().cpu().numpy()
+            
+            ytepw1 = list_y_test_pred[0].detach().cpu().numpy()
+            ytepw2 = list_y_test_pred[1].detach().cpu().numpy()
+            ytepw3 = list_y_test_pred[2].detach().cpu().numpy()
+            ytepw4 = list_y_test_pred[3].detach().cpu().numpy()
+            ytepw5 = list_y_test_pred[4].detach().cpu().numpy()
+            ytepw6 = list_y_test_pred[5].detach().cpu().numpy()
+            ytepw7 = list_y_test_pred[6].detach().cpu().numpy()
+            ytepw8 = list_y_test_pred[7].detach().cpu().numpy()
+            ytepw9 = list_y_test_pred[8].detach().cpu().numpy()
+            ytepw10 = list_y_test_pred[9].detach().cpu().numpy()
+            ytepw11 = list_y_test_pred[10].detach().cpu().numpy()
+            ytepw12 = list_y_test_pred[11].detach().cpu().numpy()
+            ytepw13 = list_y_test_pred[12].detach().cpu().numpy()
+            ytepw14 = list_y_test_pred[13].detach().cpu().numpy()
+            ytepw15 = list_y_test_pred[14].detach().cpu().numpy()
+
+            this_batch_test = {"block": ID_batch_test, "cultivar": Cult_batch_test, "X": Xcoord_batch_test, "Y": ycoord_batch_test, "ytrue": y_true_test, "ypred_w1": ytepw1, "ypred_w2": ytepw2, "ypred_w3": ytepw3, "ypred_w4": ytepw4, "ypred_w5": ytepw5, "ypred_w6": ytepw6, "ypred_w7": ytepw7, 
+                            "ypred_w8": ytepw8, "ypred_w9": ytepw9, "ypred_w10": ytepw10, "ypred_w11": ytepw11, "ypred_w12": ytepw12, "ypred_w13": ytepw13, "ypred_w14": ytepw14, "ypred_w15": ytepw15}
+            
+            
+            test_output_files.append(this_batch_test)
+        #np.save(test_npy_name, test_output_files) 
+        #print("Test Data is Saved!")
+        test_df = Inference.ScenarioEvaluation2D(test_output_files)
+        test_df.to_csv(test_df_name)
+
+        #test_block_names  = ['LIV_186_2017', 'LIV_025_2019', 'LIV_105_2018'] #utils.npy_block_names(test_output_files)
+        #df1d, df2d        = utils.time_series_eval_csv(test_output_files, test_block_names, patch_size)
+        #df1d.to_csv(test_bc_df1_name)
+        #df2d.to_csv(test_bc_df2_name)
+        _ = Inference.time_series_evaluation_plots(train_df, valid_df, test_df, fig_save_name = timeseries_fig)
+        #_ = Inference.train_val_test_satterplot(train_df, valid_df, test_df, week = 15, cmap  = 'viridis', mincnt = 2000, fig_save_name = scatterplot)
 

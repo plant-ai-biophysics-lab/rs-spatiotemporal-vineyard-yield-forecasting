@@ -146,11 +146,8 @@ class dataloader_(object):
         sp_id       = self.NewDf.loc[idx]['space']
         t_id        = self.NewDf.loc[idx]['trellis_id']
         
-        WithinBlockMean    = self.NewDf.loc[idx]['win_block_mean']
-        WithinBlockStd     = self.NewDf.loc[idx]['win_block_std']
-        WithinCultivarMean = self.NewDf.loc[idx]['win_cultivar_mean']
-        WithinCultivarStd  = self.NewDf.loc[idx]['win_cultivar_std']
-        
+        #WithinBlockMean    = self.NewDf.loc[idx]['win_block_mean']
+
         img_path   = self.NewDf.loc[idx]['IMG_PATH']
         label_path = self.NewDf.loc[idx]['LABEL_PATH']
 
@@ -158,16 +155,15 @@ class dataloader_(object):
         image = self.crop_gen(img_path, xcoord, ycoord) 
         image = np.swapaxes(image, -1, 0)    
         if self.in_channels == 5: 
-            bc_mean_mtx = self.add_input_within_bc_mean(WithinBlockMean)
-            image = np.concatenate([image, bc_mean_mtx], axis = 0)
+            block_timeseries_encode = self.time_series_encoding(block_id)
+            image = np.concatenate([image, block_timeseries_encode], axis = 0)
 
-        if self.in_channels == 6: 
+        '''if self.in_channels == 6: 
             bc_mean_mtx = self.add_input_within_bc_mean(WithinBlockMean)
             block_timeseries_encode = self.time_series_encoding(block_id)
-            image = np.concatenate([image, bc_mean_mtx, block_timeseries_encode], axis = 0)
+            image = np.concatenate([image, bc_mean_mtx, block_timeseries_encode], axis = 0)'''
         image = torch.as_tensor(image, dtype=torch.float32)
         image = image / 255.
-
 
         # return embedding tensor: 
         CulMatrix = self.patch_cultivar_matrix(cultivar_id)  
@@ -182,8 +178,7 @@ class dataloader_(object):
         mask  = torch.as_tensor(mask)
          
 
-        sample = {"image": image, "mask": mask, "EmbMatrix": EmbMat, "block": block_id, "cultivar": cultivar, "X": xcoord, "Y": ycoord, "win_block_mean":WithinBlockMean, 
-                    "win_block_std": WithinBlockStd, "win_cultivar_mean": WithinCultivarMean, "win_cultivar_std":WithinCultivarStd}
+        sample = {"image": image, "mask": mask, "EmbMatrix": EmbMat, "block": block_id, "cultivar": cultivar, "X": xcoord, "Y": ycoord}
              
         return sample
 

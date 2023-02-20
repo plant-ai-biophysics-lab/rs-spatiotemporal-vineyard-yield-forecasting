@@ -134,7 +134,6 @@ def ScenarioEvaluation2D(pred_npy):
 
     return OutDF
 
-
 def npy_block_names(npy_array):
 
     block_names = []
@@ -147,7 +146,6 @@ def npy_block_names(npy_array):
     
     return out
 
-
 def xy_vector_generator(x0, y0, wsize):
     x_vector, y_vector = [], []
     
@@ -157,7 +155,6 @@ def xy_vector_generator(x0, y0, wsize):
             y_vector.append(j)
 
     return x_vector, y_vector 
-
 
 def time_series_eval_csv(pred_npy, blocks_list, wsize = None):
     #blocks_list = get_blocks_from_patches(pred_npy)
@@ -311,7 +308,6 @@ def time_series_eval_csv(pred_npy, blocks_list, wsize = None):
     
     return OutDF, NewOUtDF
 
-
 def agg_pixelovelapp_df_2d(df):
     out = pd.DataFrame()
     
@@ -364,7 +360,8 @@ def agg_pixelovelapp_df_2d(df):
 
     return out
 
-def time_series_evaluation_plots(train, val, test, fig_save_name, save = None): 
+def time_series_evaluation_plots(train, val, test, fig_save_name): 
+    
     Weeks = ['Apr 01', 'Apr 08', 'Apr 17', 'Apr 26', 'May 05', 'May 15', 'May 21', 'May 30', 'Jun 10', 'Jun 16', 'Jun 21', 'Jun 27', 'Jul 02', 'Jul 09', 'Jul 15']
     
     results = pd.DataFrame()
@@ -428,7 +425,7 @@ def time_series_evaluation_plots(train, val, test, fig_save_name, save = None):
     axs[1, 0].plot(results["weeks"], results["Valid_MAE"], "-*")
     axs[1, 0].plot(results["weeks"], results["Test_MAE"],  "-d")
     axs[1, 0].tick_params(axis='x', rotation=45)
-    axs[1, 0].set_ylabel('MAE (ton/ac)')
+    axs[1, 0].set_ylabel('MAE (t/ha)')
     axs[1, 0].set_facecolor('white')
     plt.setp(axs[1, 0].spines.values(), color='k')
     
@@ -443,8 +440,8 @@ def time_series_evaluation_plots(train, val, test, fig_save_name, save = None):
     
     
     
-    if save is True: 
-        plt.savefig(fig_save_name, dpi = 300)
+
+    plt.savefig(fig_save_name, dpi = 300)
     
     return results 
 
@@ -787,7 +784,6 @@ class SeabornFig2Grid():
     def _resize(self, evt=None):
         self.sg.fig.set_size_inches(self.fig.get_size_inches())
 
-
 def thriple_time_series_block_eval(df1, df2, df3): 
     Weeks = ['Apr 01', 'Apr 08', 'Apr 17', 'Apr 26', 'May 05', 'May 15', 'May 21', 'May 30', 'Jun 10', 'Jun 16', 'Jun 21', 'Jun 27', 'Jul 02', 'Jul 09', 'Jul 15']
     
@@ -949,7 +945,6 @@ def concat_year_s2(df1, df2, df3):
     df['Test_MAPE_S']  = te_mape_s
     return df
 
-
 def S2_mean_eval(df2016, df2017, df2018, df2019):
     
     df = pd.DataFrame()
@@ -993,8 +988,6 @@ def S2_mean_eval(df2016, df2017, df2018, df2019):
     df['Test_MAPE_S']  = te_mape_s
     
     return df
-
-
 
 def timeseries_10m_all(S1, S2_2016, S2_2017, S2_2018, S2_2019, S3): 
     Weeks = ['Apr 01', 'Apr 08', 'Apr 17', 'Apr 26', 'May 05', 'May 15', 'May 21', 'May 30', 'Jun 10', 'Jun 16', 'Jun 21', 'Jun 27', 'Jul 02', 'Jul 09', 'Jul 15']
@@ -1082,8 +1075,6 @@ def timeseries_10m_all(S1, S2_2016, S2_2017, S2_2018, S2_2019, S3):
     plt.setp(axs[2, 1].spines.values(), color='k')
     axs[2, 1].legend(loc="upper right")
 
-
-
 def yield_true_pred_plot(ytrue, ypred, min_v = None, max_v= None):
 
     #from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -1130,8 +1121,6 @@ def yield_true_pred_plot(ytrue, ypred, min_v = None, max_v= None):
 
     #return mape_map
     #plt.savefig('./imgs/B186_1m.png', dpi = 300)
-
-
 
 def image_mae_mape_map(ytrue, ypred): 
 
@@ -1223,6 +1212,124 @@ def block_true_pred_mtx(df, block_id, aggregation = None, spatial_resolution  = 
 
 
 
+
+
+def ScenarioEvaluation2D(pred_npy):
+
+    OutDF = pd.DataFrame()
+    out_ytrue= []
+    out_ypred_w1, out_ypred_w2, out_ypred_w3, out_ypred_w4, out_ypred_w5, out_ypred_w6, out_ypred_w7, out_ypred_w8 = [],[],[],[],[],[],[],[]
+    out_ypred_w9, out_ypred_w10, out_ypred_w11, out_ypred_w12, out_ypred_w13, out_ypred_w14, out_ypred_w15 = [],[],[],[],[],[],[]
+  
+    for l in range(len(pred_npy)):
+
+        block_key = next(iter(pred_npy[l]))
+        block_allpatch = pred_npy[l][block_key]        
+            
+        ytrue     = pred_npy[l]['ytrue']
+        ytrue_flat = ytrue.flatten()
+        out_ytrue.append(ytrue_flat)
+        
+        ypred_w1  = pred_npy[l]['ypred_w1']
+        ypred_w1_flat = ypred_w1.flatten()
+        out_ypred_w1.append(ypred_w1_flat)
+        
+        ypred_w2  = pred_npy[l]['ypred_w2']
+        ypred_w2_flat = ypred_w2.flatten()
+        out_ypred_w2.append(ypred_w2_flat)
+        
+        ypred_w3  = pred_npy[l]['ypred_w3']
+        ypred_w3_flat = ypred_w3.flatten()
+        out_ypred_w3.append(ypred_w3_flat)
+        
+        ypred_w4  = pred_npy[l]['ypred_w4']
+        ypred_w4_flat = ypred_w4.flatten()
+        out_ypred_w4.append(ypred_w4_flat)
+        
+        ypred_w5  = pred_npy[l]['ypred_w5']
+        ypred_w5_flat = ypred_w5.flatten()
+        out_ypred_w5.append(ypred_w5_flat)
+        
+        ypred_w6  = pred_npy[l]['ypred_w6']
+        ypred_w6_flat = ypred_w6.flatten()
+        out_ypred_w6.append(ypred_w6_flat)
+        
+        ypred_w7  = pred_npy[l]['ypred_w7']
+        ypred_w7_flat = ypred_w7.flatten()
+        out_ypred_w7.append(ypred_w7_flat)
+        
+        ypred_w8  = pred_npy[l]['ypred_w8']
+        ypred_w8_flat = ypred_w8.flatten()
+        out_ypred_w8.append(ypred_w8_flat)
+        
+        ypred_w9  = pred_npy[l]['ypred_w9']
+        ypred_w9_flat = ypred_w9.flatten()
+        out_ypred_w9.append(ypred_w9_flat)
+        
+        ypred_w10  = pred_npy[l]['ypred_w10']
+        ypred_w10_flat = ypred_w10.flatten()
+        out_ypred_w10.append(ypred_w10_flat)
+        
+        ypred_w11  = pred_npy[l]['ypred_w11']
+        ypred_w11_flat = ypred_w11.flatten()
+        out_ypred_w11.append(ypred_w11_flat)
+        
+        ypred_w12  = pred_npy[l]['ypred_w12']
+        ypred_w12_flat = ypred_w12.flatten()
+        out_ypred_w12.append(ypred_w12_flat)
+        
+        ypred_w13  = pred_npy[l]['ypred_w13']
+        ypred_w13_flat = ypred_w13.flatten()
+        out_ypred_w13.append(ypred_w13_flat)
+        
+        ypred_w14  = pred_npy[l]['ypred_w14']
+        ypred_w14_flat = ypred_w14.flatten()
+        out_ypred_w14.append(ypred_w14_flat)
+        
+        ypred_w15  = pred_npy[l]['ypred_w15']
+        ypred_w15_flat = ypred_w15.flatten()
+        out_ypred_w15.append(ypred_w15_flat)
+      
+
+
+            
+    out_ytrue = np.concatenate(out_ytrue)#.astype(np.float16)
+    out_ypred_w1 = np.concatenate(out_ypred_w1) 
+    out_ypred_w2 = np.concatenate(out_ypred_w2) 
+    out_ypred_w3 = np.concatenate(out_ypred_w3) 
+    out_ypred_w4 = np.concatenate(out_ypred_w4) 
+    out_ypred_w5 = np.concatenate(out_ypred_w5) 
+    out_ypred_w6 = np.concatenate(out_ypred_w6) 
+    out_ypred_w7 = np.concatenate(out_ypred_w7) 
+    out_ypred_w8 = np.concatenate(out_ypred_w8) 
+    out_ypred_w9 = np.concatenate(out_ypred_w9) 
+    out_ypred_w10 = np.concatenate(out_ypred_w10) 
+    out_ypred_w11 = np.concatenate(out_ypred_w11) 
+    out_ypred_w12 = np.concatenate(out_ypred_w12) 
+    out_ypred_w13 = np.concatenate(out_ypred_w13) 
+    out_ypred_w14 = np.concatenate(out_ypred_w14) 
+    out_ypred_w15 = np.concatenate(out_ypred_w15) 
+
+    
+    OutDF['ytrue'] = out_ytrue
+    OutDF['ypred_w1'] = out_ypred_w1
+    OutDF['ypred_w2'] = out_ypred_w2 
+    OutDF['ypred_w3'] = out_ypred_w3 
+    OutDF['ypred_w4'] = out_ypred_w4 
+    OutDF['ypred_w5'] = out_ypred_w5 
+    OutDF['ypred_w6'] = out_ypred_w6 
+    OutDF['ypred_w7'] = out_ypred_w7 
+    OutDF['ypred_w8'] = out_ypred_w8 
+    OutDF['ypred_w9'] = out_ypred_w9 
+    OutDF['ypred_w10'] = out_ypred_w10 
+    OutDF['ypred_w11'] = out_ypred_w11 
+    OutDF['ypred_w12'] = out_ypred_w12 
+    OutDF['ypred_w13'] = out_ypred_w13 
+    OutDF['ypred_w14'] = out_ypred_w14 
+    OutDF['ypred_w15'] = out_ypred_w15
+
+
+    return OutDF
 
 
 

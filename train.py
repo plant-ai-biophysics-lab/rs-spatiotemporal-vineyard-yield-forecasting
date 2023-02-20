@@ -4,6 +4,7 @@ import torch.nn as nn
 from src.UNetConvLSTM import UNet2DConvLSTM
 from src.DataLoader import return_cost_sensitive_weight_sampler, dataloader_, pixel_hold_out_dataloader
 from src import utils, ModelEngine, Inference
+import time
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(torch.cuda.is_available())
 #==============================================================================================================#
@@ -44,15 +45,15 @@ def train(scenario: str,
         os.makedirs(exp_output_dir + '/loss')
         os.makedirs(exp_output_dir + '/RVs')
 
-    best_model_name      = exp_output_dir + '/best_model' + exp_name + '.pth'
-    loss_fig_name        = exp_output_dir + '/loss/loss'  + exp_name + '.png'
-    loss_df_name         = exp_output_dir + '/loss/loss'  + exp_name + '.csv' 
-    loss_weekly_fig_name = exp_output_dir + '/loss/loss'  + exp_name + '_w.png'
-    loss_weekly_df_name  = exp_output_dir + '/loss/loss'  + exp_name + '_w.csv' 
+    best_model_name      = exp_output_dir + '/best_model_' + exp_name + '.pth'
+    loss_fig_name        = exp_output_dir + '/loss/loss_'  + exp_name + '.png'
+    loss_df_name         = exp_output_dir + '/loss/loss_'  + exp_name + '.csv' 
+    loss_weekly_fig_name = exp_output_dir + '/loss/loss_'  + exp_name + '_w.png'
+    loss_weekly_df_name  = exp_output_dir + '/loss/loss_'  + exp_name + '_w.csv' 
     #==============================================================================================================#
     #================================================== csv file generator=========================================#
     #==============================================================================================================#
-    train_csv, val_csv, test_csv = utils.data_generator(scenario = scenario, spatial_resolution = spatial_resolution, 
+    train_csv, val_csv, test_csv = utils.data_generator(eval_scenario = scenario, spatial_resolution = spatial_resolution, 
                                                                 patch_size = patch_size, patch_offset = patch_offset,  
                                                                 cultivar_list = cultivar_list, 
                                                                 year_list = year_list).return_split_dataframe()
@@ -60,7 +61,7 @@ def train(scenario: str,
     #==============================================================================================================#
     #============================================      Data Weight Generation     =================================#
     #==============================================================================================================#
-    train_sampler, valid_sampler, test_sampler  = return_cost_sensitive_weight_sampler(train_csv, val_csv, test_csv, exp_output_dir)
+    train_sampler, valid_sampler, test_sampler  = return_cost_sensitive_weight_sampler(train_csv, val_csv, test_csv, exp_output_dir, run_status = 'train')
     #==============================================================================================================#
     #============================================     Reading Data                =================================#
     #==============================================================================================================#
@@ -116,7 +117,7 @@ def train(scenario: str,
         "val_w1": [], "val_w2": [], "val_w3": [], "val_w4": [], "val_w5": [], "val_w6": [], "val_w7": [], "val_w8": [], "val_w9": [], "val_w10": [],
         "val_w11": [],"val_w12": [], "val_w13": [], "val_w14": [], "val_w15": []}
     for epoch in range(1, epochs+1):
-        
+        training_start_time = time.time()
         # TRAINING
         train_epoch_loss = 0
         tplw1, tplw2, tplw3, tplw4, tplw5, tplw6, tplw7, tplw8, tplw9, tplw10, tplw11, tplw12, tplw13, tplw14, tplw15 = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
@@ -295,8 +296,8 @@ def train(scenario: str,
         loss_week_stats['val_w14'].append(vplw14/len(data_loader_validate))
         loss_week_stats['val_w15'].append(vplw15/len(data_loader_validate))
 
-            
-        print(f'Epoch {epoch+0:03}: | Train Loss: {train_epoch_loss/len(data_loader_training):.4f} | Val Loss: {val_epoch_loss/len(data_loader_validate):.4f}') 
+        training_duration_time = (time.time() - training_start_time)        
+        print(f'Epoch {epoch+0:03}: | Time(s): {training_duration_time:.3f}| Train Loss: {train_epoch_loss/len(data_loader_training):.4f} | Val Loss: {val_epoch_loss/len(data_loader_validate):.4f}') 
         
         if (val_epoch_loss/len(data_loader_validate)) < best_val_loss or epoch==0:
                     
@@ -333,9 +334,12 @@ def train(scenario: str,
             print("We are at epoch:", epoch)
             break
 
-    _ = Inference.save_loss_df(loss_stats, loss_df_name, loss_fig_name)
-    _ = Inference.save_loss_df(loss_week_stats, loss_weekly_df_name, loss_weekly_fig_name)
- 
+    _ = ModelEngine.save_loss_df(loss_stats, loss_df_name, loss_fig_name)
+    _ = ModelEngine.save_loss_df(loss_week_stats, loss_weekly_df_name, loss_weekly_fig_name)
+
+    _ = ModelEngine.predict(model, data_loader_training, data_loader_validate, data_loader_test, exp_output_dir, Exp_name = exp_name)
+
+
 if __name__ == "__main__":
     '''year_dict = {'Y1617':['2018', '2019', '2016', '2017'], 
                 'Y1716':['2018', '2019', '2017', '2016'], 
@@ -351,9 +355,13 @@ if __name__ == "__main__":
             'Y1918':['2016', '2017', '2019', '2018']}
     #for i in range(1, 5):
     for key, l in year_dict.items():'''
-    train(scenario = 3, spatial_resolution = 1, patch_size = 80, patch_offset = 40,  
-        cultivar_list = None, block_list = None, year_list = None, 
-        dropout = 0.3, batch_size = 32, learning_rate = 0.001, weight_decay = 0.0006,
-        in_channel = 6, emb_channel = 4, loss_stop_tolerance = 150, epochs = 500, exp_name = 'test') 
-
-        
+    wd_list = [0.9, 0.5, 0.1] 
+    lr_list = [0.0001, 0.00001]
+    for wd in wd_list: 
+        for lr in lr_list: 
+            ex_n = 'BYHO_6987' + '_' + str(wd)+ '_' + str(lr) 
+            print(f"")
+            train(scenario = 'block_year_hold_out', spatial_resolution = 10, patch_size = 16, patch_offset = 2,  
+                cultivar_list = None,  year_list = ['2016', '2019', '2018', '2017'], 
+                dropout = 0.40, batch_size = 64, learning_rate = lr, weight_decay = wd,
+                in_channel = 5, emb_channel = 4, loss_stop_tolerance = 200, epochs = 400, exp_name = ex_n) 
