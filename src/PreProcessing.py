@@ -108,8 +108,6 @@ def pol_to_bounding_box(pol):
                     np.max(arr[:,0]),
                     np.max(arr[:,1]))   
 
-
-
 def block_npy_gen(data_dir, img_save_dir, label_save_dir, year = None, spatial_res = None):
     LIV_year = 'LIV' + year
 
@@ -300,8 +298,6 @@ def block_npy_gen(data_dir, img_save_dir, label_save_dir, year = None, spatial_r
             label_npy_name = label_save_dir + new_label_name
             _ = saveList(label_data, label_npy_name) 
 
-
-
 def tranfer_file(input_list, filter_list, src_dir, dst_dir):
     for f in input_list:
         
@@ -309,7 +305,6 @@ def tranfer_file(input_list, filter_list, src_dir, dst_dir):
             src = src_dir+f
             dst = dst_dir+f
             shutil.move(src,dst)
-            
             
 def saveList(myList,filename):
     # the filename should mention the extension 'npy'

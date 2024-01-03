@@ -5,3 +5,4 @@
 *.ali
 __pycache__
 .DS_Store
+hidden_codes

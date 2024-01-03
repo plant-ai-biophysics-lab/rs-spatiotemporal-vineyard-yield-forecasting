@@ -1148,10 +1148,6 @@ def image_mae_mape_map(ytrue, ypred):
 
     return out1, out2
 
-
-        
-
-        
 def block_true_pred_mtx(df, block_id, aggregation = None, spatial_resolution  = None, scale = None):
     
     name_split = os.path.split(str(block_id))[-1]
@@ -1209,10 +1205,6 @@ def block_true_pred_mtx(df, block_id, aggregation = None, spatial_resolution  = 
         return df_agg, true_agg, pred_agg
     else:
         return this_block_df, true_out, pred_out            
-
-
-
-
 
 def ScenarioEvaluation2D(pred_npy):
 
@@ -1330,8 +1322,6 @@ def ScenarioEvaluation2D(pred_npy):
 
 
     return OutDF
-
-
 
 def block_true_pred_mtx_timeseries(df, block_id, aggregation = None, spatial_resolution  = None):
     
@@ -1629,7 +1619,6 @@ def block_true_pred_mtx_timeseries(df, block_id, aggregation = None, spatial_res
 
     fig.tight_layout()
     return this_block_df 
-
 
 def scenarios_satterplot(train_df, valid_df, test_df, week = None, cmap  = None, mincnt = None):
 

@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from src.ModelEngine import *
+from model.cnn_modules import *
 
     
 class UNet2DConvLSTM(nn.Module):
@@ -8,10 +8,10 @@ class UNet2DConvLSTM(nn.Module):
     def __init__(self, in_channels: int, 
                         out_channels: int, 
                         num_filters: int, 
-                        Emb_Channels: int,
+                        embd_channels: int,
                         dropout: float, 
                         batch_size: int, 
-                        botneck_size: int):
+                        bottelneck_size: int):
 
 
         super(UNet2DConvLSTM, self).__init__()
@@ -20,24 +20,24 @@ class UNet2DConvLSTM(nn.Module):
         self.out_channels  = out_channels
         self.num_filters   = num_filters
         self.dropout       = dropout
-        self.Emb_Channels  = Emb_Channels
+        self.embd_channels  = embd_channels
         self.batch_size    = batch_size
-        self.botneck_size  = botneck_size
+        self.bottelneck_size  = bottelneck_size
         
 
         # Down sampling
         self.Encoder1    = Encoder2D(self.in_channels, self.num_filters, self.num_filters, self.dropout)   
-        self.Pool1       = MaxPolling2D() 
+        self.Pool1       = MaxPooling2D() 
         self.Encoder2    = Encoder2D(self.num_filters, self.num_filters, self.num_filters * 2, self.dropout)
-        self.Pool2       = MaxPolling2D() 
+        self.Pool2       = MaxPooling2D() 
         self.Encoder3    = Encoder2D(self.num_filters * 2, self.num_filters * 2, self.num_filters * 4, self.dropout)
-        self.Pool3       = MaxPolling2D()
+        self.Pool3       = MaxPooling2D()
         
         
         # LSTM
-        self.LSTM        = ConvLSTM(img_size= ((self.batch_size, 15, (self.num_filters * 4) + self.Emb_Channels, self.botneck_size, self.botneck_size)), 
-                                    img_width = self.botneck_size,
-                                    input_dim = (self.num_filters * 4) + self.Emb_Channels, 
+        self.LSTM        = ConvLSTM(img_size= ((self.batch_size, 15, (self.num_filters * 4) + self.embd_channels, self.bottelneck_size, self.bottelneck_size)), 
+                                    img_width = self.bottelneck_size,
+                                    input_dim = (self.num_filters * 4) + self.embd_channels, 
                                     hidden_dim = (self.num_filters * 4),
                                     kernel_size=(3,3), cnn_dropout=self.dropout, rnn_dropout=self.dropout, 
                                     batch_first=True,  bias=True, peephole=False,  layer_norm=False,  
@@ -52,8 +52,7 @@ class UNet2DConvLSTM(nn.Module):
         self.Up1          = Decoder2D(self.num_filters * 3, self.num_filters*3, self.dropout) 
         self.Encoder1Up   = Encoder2D(self.num_filters * 4, self.num_filters * 2, self.num_filters, self.dropout) 
       
-        # pixel-wise regression head 
-        #self.out4 = OutConv2D((self.num_filters*4)+ self.Emb_Channels, out_channels) 
+
         self.out1 = OutConv2D(self.num_filters, out_channels)
         
     def forward(self, x, e):
