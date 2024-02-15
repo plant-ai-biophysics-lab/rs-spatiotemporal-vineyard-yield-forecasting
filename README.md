@@ -25,16 +25,6 @@ Before running the code, ensure you have the following dependencies installed:
 
 Validation scenario 1 is called “pixel-hold-out”, a common strategy in which the validation year and block are part of training distribution. Validation scenario 2, sometimes called “year-hold-out”, can be used when there are time-series observations for each block, and the train and validation datasets are split by year. Although the unseen block is used for both train and validation datasets, management practice and site conditions vary from year-to-year, leading to a more general evaluation task. Third, we investigate validation scenario 3 to address the limitations of pixel-hold-out and year-hold-out, which is called “block-hold-out”. In this scenario, the historical observations of the test block have never been used in the training process but its cultivar type has been seen by different blocks. This scenario evaluates the model’s capacity to generalize to a new block which has no historical yield observations.
 
-
-## Usage
-The current dataloader is designed for local data and directory structures specific to our development environment. To effectively use the model with your data, you will need to implement a custom dataloader tailored to your local file directories and dataset structure. We plan to release a sample dataset along with detailed instructions on how to adapt the model for your needs in the near future, so please stay tuned to our GitHub repository for updates.
-
-
-```bash
-python run.py --exp_name my_experiment --batch_size 64 --scenario block-hold-out --in_channels 6 --dropout 0.1  --lr 0.0001 --wd 0.0001 --epochs 50 
-
-
-
 ## Citing 
 
 @article{kamangir2024large,
@@ -48,4 +38,16 @@ python run.py --exp_name my_experiment --batch_size 64 --scenario block-hold-out
 }
 
 Kamangir, H., Sams, B.S., Dokoozlian, N., Sanchez, L. and Earles, J.M., 2024. Large-scale spatio-temporal yield estimation via deep learning using satellite and management data fusion in vineyards. Computers and Electronics in Agriculture, 216, p.108439.
+
+
+
+
+## Usage
+The current dataloader is designed for local data and directory structures specific to our development environment. To effectively use the model with your data, you will need to implement a custom dataloader tailored to your local file directories and dataset structure. We plan to release a sample dataset along with detailed instructions on how to adapt the model for your needs in the near future, so please stay tuned to our GitHub repository for updates.
+
+
+```bash
+python run.py --exp_name my_experiment --batch_size 64 --scenario block-hold-out --in_channels 6 --dropout 0.1  --lr 0.0001 --wd 0.0001 --epochs 50 
+
+
 
