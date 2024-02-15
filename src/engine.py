@@ -130,7 +130,6 @@ class YieldEst:
         self.exp_output_dir = '/data2/hkaman/Imbalance/EXPs/CNNs/' + 'EXP_' + self.exp
 
         self.best_model_name = os.path.join(self.exp_output_dir, 'best_model_' + self.exp + '.pth')
-        self.last_model_name = os.path.join(self.exp_output_dir, 'last_model_' + self.exp + '.pth')
         self.best_checkpoint_dir = os.path.join(self.exp_output_dir, 'best_checkpoints_' + self.exp + '.pth')
         self.checkpoint_dir = os.path.join(self.exp_output_dir, 'checkpoints')
         self.loss_fig_name = os.path.join(self.exp_output_dir, 'loss', 'loss_' + self.exp + '.png')
@@ -169,11 +168,9 @@ class YieldEst:
                 
                 xtrain = sample['image'].to(device)
                 ytrain_true = sample['mask'][:,:,:,:,0].to(device)
-                weight_train = sample['weight'].to(device)
                 embmatrix_train = sample['EmbMatrix'].to(device)
-                yieldzone_train = sample['YZ'].to(device)
 
-                list_ytrain_pred  = self.model(xtrain, embmatrix_train, yieldzone_train)
+                list_ytrain_pred  = self.model(xtrain, embmatrix_train)
                 self.optimizer.zero_grad()
 
                 train_loss = self._calculate_timeseries_loss(ytrain_true, list_ytrain_pred)
@@ -190,11 +187,9 @@ class YieldEst:
                     
                     xvalid = sample['image'].to(device)
                     yvalid_true = sample['mask'][:,:,:,:,0].to(device)
-                    weight_valid = sample['weight'].to(device)
                     embmatrix_valid = sample['EmbMatrix'].to(device)
-                    yieldzone_valid = sample['YZ'].to(device)
 
-                    list_yvalid_pred   = self.model(xvalid, embmatrix_valid, yieldzone_valid) 
+                    list_yvalid_pred   = self.model(xvalid, embmatrix_valid) 
   
                     valid_loss = self._calculate_timeseries_loss(yvalid_true, list_yvalid_pred)
 
@@ -278,15 +273,13 @@ class YieldEst:
                 for sample in data_loader:
                     x = sample['image'].to(device)
                     y = sample['mask'].detach().cpu().numpy()
-                    emblist = sample['EmbList']
                     block_id = sample['block']
                     block_cultivar_id = sample['cultivar']
                     block_x_coords = sample['X']
                     block_y_coords = sample['Y']
                     embmatrix = sample['EmbMatrix'].to(device)
-                    yieldzone = sample['YZ'].to(device)
                 
-                    pred_list = self.model(x, embmatrix, yieldzone)
+                    pred_list = self.model(x, embmatrix)
 
                     this_batch = {"block": block_id, 
                                         "cultivar": block_cultivar_id, 
@@ -423,9 +416,6 @@ class YieldEst:
                         tb_ypred_w15 = pred_npy[l]['ypred_w15'][index]
                         tb_flatten_ypred_w15 = tb_ypred_w15.flatten()
                         out_ypred_w15.append(tb_flatten_ypred_w15)
-                        # list_ypred = {f'ypred_w{p}': pred_npy[l][f'ypred_w{p}'][index].flatten() for p in range(1, 16, 1)}
-                        # for p in out_ypreds:
-                        #     out_ypreds[p].append(list_ypred[p])
 
                         tb_block_id = np.array(len(tb_flatten_ytrue)*[block_id], dtype=np.int32)
                         out_blocks.append(tb_block_id)
@@ -474,9 +464,6 @@ class YieldEst:
         OutDF['ypred_w13'] = out_ypred_w13
         OutDF['ypred_w14'] = out_ypred_w14
         OutDF['ypred_w15'] = out_ypred_w15
-
-        # for p in out_ypreds:
-        #     OutDF[p] = out_ypreds[p]
 
         return OutDF
     
