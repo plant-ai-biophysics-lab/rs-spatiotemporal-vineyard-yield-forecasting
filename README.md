@@ -2,7 +2,7 @@
 
 This repository is the official implementation of the research presented in the paper "Large-scale spatio-temporal yield estimation via deep learning using satellite and management data fusion in vineyards". This project presents a novel deep learning model combining 2D U-Net and ConvLSTM for yield estimation in vineyards using satellite imagery and management practice data. The model leverages 15 weeks of Sentinel-2 observations across 4 to 6 channels (RGB, NIR, and optionally encoded time and historical yield averages). It also incorporates embedded management practice information, including cultivar types, trellis types, row spacing, and canopy distance, to improve estimation accuracy.
 
-![Paper Figure](https://ars.els-cdn.com/content/image/1-s2.0-S016816992300827X-gr12.jpg)
+![Paper Figure](https://ars.els-cdn.com/content/image/1-s2.0-S016816992300827X-gr4.jpg)
 
 ## Paper Reference
 For in-depth details, refer to our [paper](https://www.sciencedirect.com/science/article/pii/S016816992300827X).
@@ -32,3 +32,20 @@ The current dataloader is designed for local data and directory structures speci
 
 ```bash
 python run.py --exp_name my_experiment --batch_size 64 --scenario block-hold-out --in_channels 6 --dropout 0.1  --lr 0.0001 --wd 0.0001 --epochs 50 
+
+
+
+## Citing 
+
+@article{kamangir2024large,
+  title={Large-scale spatio-temporal yield estimation via deep learning using satellite and management data fusion in vineyards},
+  author={Kamangir, Hamid and Sams, Brent S and Dokoozlian, Nick and Sanchez, Luis and Earles, J Mason},
+  journal={Computers and Electronics in Agriculture},
+  volume={216},
+  pages={108439},
+  year={2024},
+  publisher={Elsevier}
+}
+
+Kamangir, H., Sams, B.S., Dokoozlian, N., Sanchez, L. and Earles, J.M., 2024. Large-scale spatio-temporal yield estimation via deep learning using satellite and management data fusion in vineyards. Computers and Electronics in Agriculture, 216, p.108439.
+
