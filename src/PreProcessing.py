@@ -12,33 +12,45 @@ from rasterio.merge import merge
 import cv2
 
 
-
 root_dir = '/data2/hkaman/Livingston/' 
 
 
+def _quantile_norm(band, q05, q95):
+    return np.clip((band - q05) / (q95 - q05), 0, 1)
 
 def sentinel_image_stretch(image): 
-    # normalize into 0-255
-    red = image[0,:,:]
-    red_n = ((255*red/np.max(red))).astype(np.uint8)
-    red_n = np.expand_dims(red_n, axis = 0)
 
-    green = image[1,:,:]
-    green_n = ((255*green/np.max(green))).astype(np.uint8)
-    green_n = np.expand_dims(green_n, axis = 0)
+    q05, q95 = np.percentile(image, [5, 95])
+
+    norm_bands = [_quantile_norm(image[i].astype(np.float32), q05, q95)*255 for i in range(4)]
+    out = np.dstack(norm_bands)
+    out = out.transpose(2, 0, 1)
+
+    return out
+ 
+
+# def sentinel_image_stretch(image): 
+#     # normalize into 0-255
+#     red = image[0,:,:]
+#     red_n = ((255*red/np.max(red))).astype(np.uint8)
+#     red_n = np.expand_dims(red_n, axis = 0)
+
+#     green = image[1,:,:]
+#     green_n = ((255*green/np.max(green))).astype(np.uint8)
+#     green_n = np.expand_dims(green_n, axis = 0)
 
 
-    blue = image[2,:,:]
-    blue_n = ((255*blue/np.max(blue))).astype(np.uint8)
-    blue_n = np.expand_dims(blue_n, axis = 0)
+#     blue = image[2,:,:]
+#     blue_n = ((255*blue/np.max(blue))).astype(np.uint8)
+#     blue_n = np.expand_dims(blue_n, axis = 0)
 
-    nir = image[3,:,:]
-    nir_n = ((255*nir/np.max(nir))).astype(np.uint8)
-    nir_n = np.expand_dims(nir_n, axis = 0) 
+#     nir = image[3,:,:]
+#     nir_n = ((255*nir/np.max(nir))).astype(np.uint8)
+#     nir_n = np.expand_dims(nir_n, axis = 0) 
 
-    image_norm = np.concatenate([red_n, green_n, blue_n, nir_n], axis = 0)
+#     image_norm = np.concatenate([red_n, green_n, blue_n, nir_n], axis = 0)
 
-    return image_norm
+#     return image_norm
 
 def img_crop(img, polygon):
     with rasterio.open(img) as inimg:

@@ -71,12 +71,12 @@ def main(args):
     )
 
     # Train the model
-    _ = YE.train(
-        data_loader_training, 
-        data_loader_validate, 
-        epochs=epochs, 
-        loss_stop_tolerance=100
-    )
+    # _ = YE.train(
+    #     data_loader_training, 
+    #     data_loader_validate, 
+    #     epochs=epochs, 
+    #     loss_stop_tolerance=100
+    # )
 
     # Make predictions
     _ = YE.predict(model, data_loader_training, category='train', iter=1)
